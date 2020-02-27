@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 
+import AppointmentController from './app/controllers/AppointmentController';
 import FileController from './app/controllers/FileController';
 import ProviderController from './app/controllers/ProviderController';
 import SessionController from './app/controllers/SessionController';
@@ -20,5 +21,7 @@ routes.put('/users', UserController.update);
 routes.get('/providers', ProviderController.index);
 
 routes.post('/files', upload.single('file'), FileController.store);
+
+routes.post('/appointments', AppointmentController.store);
 
 export default routes;
