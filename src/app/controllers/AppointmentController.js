@@ -2,6 +2,7 @@ import { startOfHour, parseISO, isBefore, format, subHours } from 'date-fns';
 import pt from 'date-fns/locale/pt';
 import * as Yup from 'yup';
 
+import Mail from '../../lib/Mail';
 import Appointment from '../models/Appointment';
 import File from '../models/File';
 import User from '../models/User';
@@ -110,12 +111,24 @@ class AppointmentController {
   }
 
   async delete(req, res) {
-    const appointment = await Appointment.findByPk(req.params.id);
+    const appointment = await Appointment.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: 'provider',
+          attributes: ['name', 'email'],
+        },
+      ],
+    });
 
     if (appointment.user_id !== req.userId) {
       return res.status(401).json({
         error: "You don't have permission to cancel this appointment.",
       });
+    }
+
+    if (appointment.canceled_at) {
+      return res.status(400).json({ error: 'Appointment already canceled.' });
     }
 
     const dateWithSub = subHours(appointment.date, 2);
@@ -129,6 +142,12 @@ class AppointmentController {
     appointment.canceled_at = new Date();
 
     await appointment.save();
+
+    await Mail.sendMail({
+      to: `${appointment.provider.name} <${appointment.provider.email}>`,
+      subject: 'Appointment canceled',
+      text: 'You have a new cancellation',
+    });
 
     return res.json(appointment);
   }
